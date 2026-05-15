@@ -3,9 +3,9 @@
 status: IN_PROGRESS
 mode: greenfield
 version: unreleased
-current_phase: Environment
-current_epic: none
-iteration: 0
+current_phase: Refinement
+current_epic: Project Scaffold
+iteration: 1
 
 ## Phase enums
 
@@ -18,6 +18,7 @@ iteration: 0
 - Vision ✓ → .project-artifacts/f1-vision.md
 - Architecture ✓ → .project-artifacts/f2-architecture.md
 - Backlog ✓ → .project-artifacts/f3-backlog.md
+- Environment ✓
 
 ## Backlog
 | Priority | Epic | Size | Status |

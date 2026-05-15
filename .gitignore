@@ -6,3 +6,9 @@ build/
 target/
 out/
 .DS_Store
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+data/
+*.db
