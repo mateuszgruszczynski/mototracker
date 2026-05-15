@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(ls *)", "Bash(find *)", "Bash(grep *)",
+      "Bash(cat *)", "Bash(head *)", "Bash(tail *)",
+      "Bash(mkdir *)", "Bash(cp *)", "Bash(mv *)", "Bash(rm *)",
+      "Bash(chmod *)", "Bash(touch *)", "Bash(echo *)",
+      "Bash(curl *)", "Bash(wget *)", "Bash(env)", "Bash(which *)",
+      "Bash(apt-get *)", "Bash(apt *)",
+      "Bash(python3 *)", "Bash(pip3 *)", "Bash(pytest *)",
+      "Bash(uv *)", "Bash(uvx *)",
+      "Bash(uvicorn *)", "Bash(alembic *)",
+      "Bash(playwright *)"
+    ],
+    "deny": []
+  }
+}
