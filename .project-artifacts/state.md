@@ -4,8 +4,8 @@ status: IN_PROGRESS
 mode: greenfield
 version: unreleased
 current_phase: Refinement
-current_epic: Project Scaffold
-iteration: 1
+current_epic: Saved Searches CRUD
+iteration: 2
 
 ## Phase enums
 
@@ -23,7 +23,7 @@ iteration: 1
 ## Backlog
 | Priority | Epic | Size | Status |
 |---|---|---|---|
-| P1 | Project Scaffold | S | TODO |
+| P1 | Project Scaffold | S | DONE |
 | P1 | Saved Searches CRUD | S | TODO |
 | P1 | Otomoto Scraper Engine | L | TODO |
 | P1 | Scan Execution & Persistence | M | TODO |
@@ -36,6 +36,7 @@ iteration: 1
 ## Completed iterations
 | # | Epic | Status | Closed | Notes | Retro |
 |---|---|---|---|---|---|
+| 001 | Project Scaffold | DONE | 2026-05-15 | No plan changes | iterations/001-project-scaffold/i7-retro.md |
 
 ## Releases
 | Version | Date | Iterations | Notes |

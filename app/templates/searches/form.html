@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if search %}Edit Search{% else %}New Search{% endif %} — MotoTracker
+{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">
+        {% if search %}Edit Search{% else %}New Search{% endif %}
+    </h1>
+
+    <form method="post"
+          action="{% if search %}/searches/{{ search.id }}{% else %}/searches{% endif %}"
+          class="bg-white rounded-lg shadow p-6 space-y-4">
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+            <input type="text" name="name" value="{{ values.name }}"
+                   class="w-full border rounded px-3 py-2 text-sm {% if errors.name %}border-red-400{% else %}border-gray-300{% endif %}
+                          focus:outline-none focus:ring-2 focus:ring-blue-400">
+            {% if errors.name %}
+            <p class="text-red-500 text-xs mt-1">{{ errors.name }}</p>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Make *</label>
+                <input type="text" name="make" value="{{ values.make }}"
+                       class="w-full border rounded px-3 py-2 text-sm {% if errors.make %}border-red-400{% else %}border-gray-300{% endif %}
+                              focus:outline-none focus:ring-2 focus:ring-blue-400">
+                {% if errors.make %}
+                <p class="text-red-500 text-xs mt-1">{{ errors.make }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Model *</label>
+                <input type="text" name="model" value="{{ values.model }}"
+                       class="w-full border rounded px-3 py-2 text-sm {% if errors.model %}border-red-400{% else %}border-gray-300{% endif %}
+                              focus:outline-none focus:ring-2 focus:ring-blue-400">
+                {% if errors.model %}
+                <p class="text-red-500 text-xs mt-1">{{ errors.model }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Year from</label>
+                <input type="number" name="year_from" value="{{ values.year_from }}"
+                       min="1990" max="2030"
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Year to</label>
+                <input type="number" name="year_to" value="{{ values.year_to }}"
+                       min="1990" max="2030"
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+            <button type="submit"
+                    class="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 text-sm font-medium">
+                {% if search %}Save Changes{% else %}Create{% endif %}
+            </button>
+            <a href="/" class="text-gray-500 hover:text-gray-700 px-4 py-2 text-sm">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
