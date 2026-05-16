@@ -181,17 +181,24 @@ async def run_scan(saved_search_id: int, existing_scan: Scan | None = None) -> N
             total_rechecks = len(disappeared)
             for i, listing in enumerate(disappeared, 1):
                 try:
-                    still_up = await check_listing_exists(listing.url, throttler=throttler)
-                    if still_up:
+                    status_code = await check_listing_exists(listing.url, throttler=throttler)
+                    if status_code == 404:
+                        listing.status = "confirmed_sold"
+                        listing.sold_at = now
+                    elif status_code == 200:
                         listing.status = "likely_sold"
                         logger.warning(
-                            "Listing %s still reachable but not in scan %s results — marked likely_sold",
+                            "Listing %s returned 200 but not in scan %s results — marked likely_sold",
                             listing.id,
                             scan_id,
                         )
                     else:
-                        listing.status = "confirmed_sold"
-                        listing.sold_at = now
+                        # 403, 5xx, None (network error) — can't determine; leave status unchanged
+                        logger.warning(
+                            "Listing %s re-check returned %s — status unchanged",
+                            listing.id,
+                            status_code,
+                        )
                 except Exception as exc:
                     logger.warning("Re-check failed for listing %s: %s", listing.id, exc)
                 emit(scan_id, {"type": "recheck", "checked": i, "total_rechecks": total_rechecks})

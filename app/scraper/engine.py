@@ -204,21 +204,20 @@ async def scrape_search(filters: dict) -> AsyncGenerator[tuple[int, list[ParsedL
                 if not page_listings:
                     break
                 yield page_num, page_listings
-
-                next_btn = await page.query_selector(NEXT_PAGE_LINK)
-                if not next_btn:
-                    break
         finally:
             await browser.close()
 
 
-async def check_listing_exists(url: str, throttler: AsyncThrottler | None = None) -> bool:
+async def check_listing_exists(url: str, throttler: AsyncThrottler | None = None) -> int | None:
+    """Return HTTP status code, or None on network error."""
     if throttler is not None:
         await throttler.wait()
     headers = {"User-Agent": settings.scraper_user_agent}
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
             resp = await client.head(url, headers=headers)
-            return resp.status_code != 404
-    except httpx.RequestError:
-        return True
+            logger.info("Re-check %s → %d", url, resp.status_code)
+            return resp.status_code
+    except httpx.RequestError as exc:
+        logger.warning("Re-check network error for %s: %s", url, exc)
+        return None
