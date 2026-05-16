@@ -1,5 +1,19 @@
 # Changelog
 
+## [Iteration 009] — Scan Progress Streaming (SSE) — 2026-05-16
+
+### Added
+- `GET /scans/{scan_id}/stream` SSE endpoint streaming `page`/`recheck`/`done`/`failed` events
+- In-process `asyncio.Queue` event store (`app/scraper/events.py`) with snapshot for late subscribers
+- Alpine.js progress panel on results page: live counters, auto-reload on completion, inline error on failure
+- Scan trigger redirects to results page with `?scan_id=` for immediate SSE subscription
+
+### Changed
+- `scrape_search` converted from list-returning coroutine to async generator yielding `(page_num, page_listings)` per page
+- `run_scan` accepts optional pre-created Scan object to avoid duplicate row creation
+
+Retro: iterations/009-scan-progress-streaming/i7-retro.md
+
 ## [Iteration 008] — UI Polish & Navigation — 2026-05-16
 
 ### Added
