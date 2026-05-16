@@ -3,6 +3,13 @@
 {% block title %}{{ search.name }} — MotoTracker{% endblock %}
 
 {% block content %}
+<!-- Breadcrumb -->
+<nav class="text-sm text-gray-400 mb-4">
+    <a href="/" class="hover:text-gray-600">Home</a>
+    <span class="mx-1">›</span>
+    <span class="text-gray-700">{{ search.name }}</span>
+</nav>
+
 <div class="flex items-center justify-between mb-4">
     <div>
         <h1 class="text-2xl font-bold text-gray-800">{{ search.name }}</h1>
@@ -13,25 +20,28 @@
             {% endif %}
         </p>
     </div>
-    <div class="flex gap-3">
-        <form method="post" action="/searches/{{ search.id }}/scan">
-            <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm font-medium">Run Scan</button>
-        </form>
-        <a href="/" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm">← Back</a>
-    </div>
+    <form method="post" action="/searches/{{ search.id }}/scan">
+        <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm font-medium">Run Scan</button>
+    </form>
 </div>
 
 {% if last_scan %}
 <p class="text-xs text-gray-400 mb-4">
     Last scan: {{ last_scan.finished_at.strftime('%Y-%m-%d %H:%M') }} UTC &nbsp;·&nbsp; {{ total }} listing{{ 's' if total != 1 else '' }}
 </p>
-{% else %}
-<p class="text-xs text-amber-500 mb-4">No completed scan yet. Click Run Scan to fetch results.</p>
 {% endif %}
 
-{% if total == 0 %}
-<div class="text-center py-16 text-gray-400">
-    <p>No active listings found for this search.</p>
+{% if not last_scan %}
+<div class="text-center py-16">
+    <p class="text-2xl mb-2">🔍</p>
+    <p class="text-lg font-medium text-gray-600">No scan yet</p>
+    <p class="text-sm text-gray-400 mt-1">Run a scan to fetch listings from Otomoto.</p>
+</div>
+{% elif total == 0 %}
+<div class="text-center py-16">
+    <p class="text-2xl mb-2">📭</p>
+    <p class="text-lg font-medium text-gray-600">No active listings</p>
+    <p class="text-sm text-gray-400 mt-1">All listings may have been sold or the search returned no results.</p>
 </div>
 {% else %}
 

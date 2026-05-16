@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, subqueryload
 
 from app.db import get_db
 from app.models.listing import Listing
+from app.models.saved_search import SavedSearch
 
 templates = Jinja2Templates(directory=Path(__file__).parent.parent / "templates")
 
@@ -76,11 +77,14 @@ async def detail(request: Request, otomoto_id: str, db: Session = Depends(get_db
     }
     status_label, status_color = status_map.get(listing.status, ("Unknown", "gray"))
 
+    search = db.get(SavedSearch, listing.saved_search_id) if listing.saved_search_id else None
+
     return templates.TemplateResponse(
         request,
         "listings/detail.html",
         {
             "listing": listing,
+            "search": search,
             "chart_data": chart_data,
             "history": history,
             "status_label": status_label,

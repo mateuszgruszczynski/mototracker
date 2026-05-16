@@ -3,9 +3,15 @@
 {% block title %}{{ listing.title or listing.id }} — MotoTracker{% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <a href="javascript:history.back()" class="text-sm text-gray-400 hover:text-gray-600">← Back</a>
-</div>
+<nav class="text-sm text-gray-400 mb-4">
+    <a href="/" class="hover:text-gray-600">Home</a>
+    {% if search %}
+    <span class="mx-1">›</span>
+    <a href="/searches/{{ search.id }}" class="hover:text-gray-600">{{ search.name }}</a>
+    {% endif %}
+    <span class="mx-1">›</span>
+    <span class="text-gray-700">{{ listing.title or listing.id }}</span>
+</nav>
 
 <div class="flex items-start justify-between mb-6">
     <div>

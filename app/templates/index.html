@@ -3,12 +3,8 @@
 {% block title %}MotoTracker — Saved Searches{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-6">
+<div class="mb-6">
     <h1 class="text-2xl font-bold text-gray-800">Saved Searches</h1>
-    <a href="/searches/new"
-       class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium">
-        + New Search
-    </a>
 </div>
 
 {% if searches %}
@@ -41,7 +37,10 @@
                 </td>
                 <td class="px-4 py-3">
                     {% if s.id in running_ids %}
-                    <span class="text-gray-400 text-xs">Scanning…</span>
+                    <span class="flex items-center gap-1.5 text-gray-400 text-xs">
+                        <span class="inline-block w-3 h-3 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></span>
+                        Scanning…
+                    </span>
                     {% else %}
                     <form method="post" action="/searches/{{ s.id }}/scan">
                         <button type="submit"

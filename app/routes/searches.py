@@ -83,7 +83,7 @@ async def create(
     )
     db.add(search)
     db.commit()
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse("/?toast=Search+created", status_code=303)
 
 
 # ── parameterised routes ───────────────────────────────────────────────────
@@ -187,7 +187,7 @@ async def update(
     search.year_to = int(year_to) if year_to.strip() else None
     search.updated_at = datetime.now(timezone.utc)
     db.commit()
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse("/?toast=Search+updated", status_code=303)
 
 
 @router.post("/{search_id}/scan")
@@ -198,7 +198,7 @@ async def trigger_scan(search_id: int, background_tasks: BackgroundTasks, db: Se
     running = db.query(Scan).filter_by(saved_search_id=search_id, status="running").first()
     if not running:
         background_tasks.add_task(run_scan, search_id)
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse("/?toast=Scan+started", status_code=303)
 
 
 @router.post("/{search_id}/delete")
@@ -207,4 +207,4 @@ async def delete(search_id: int, db: Session = Depends(get_db)):
     if search:
         db.delete(search)
         db.commit()
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse("/?toast=Search+deleted", status_code=303)
