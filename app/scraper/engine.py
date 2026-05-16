@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import re
 from collections.abc import AsyncGenerator
 from decimal import Decimal, InvalidOperation
@@ -28,6 +29,8 @@ from app.scraper.selectors import (
     SEARCH_PATH,
 )
 from app.scraper.throttle import AsyncThrottler
+
+logger = logging.getLogger(__name__)
 
 
 def _build_search_url(filters: dict, page: int = 1) -> str:
@@ -192,10 +195,12 @@ async def scrape_search(filters: dict) -> AsyncGenerator[tuple[int, list[ParsedL
         try:
             for page_num in range(1, settings.scraper_max_pages + 1):
                 url = _build_search_url(filters, page=page_num)
+                logger.info("Scraping page %d: %s", page_num, url)
                 checker.assert_allowed(url)
                 await _navigate_with_retry(page, url, throttler)
 
                 page_listings = await _parse_listings_from_page(page)
+                logger.info("Page %d returned %d listings", page_num, len(page_listings))
                 if not page_listings:
                     break
                 yield page_num, page_listings
