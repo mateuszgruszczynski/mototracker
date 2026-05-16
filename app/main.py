@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.routes import router
 from app.routes.listings import router as listings_router
+from app.routes.scans import router as scans_router
 from app.routes.searches import router as searches_router
 
 app = FastAPI(title="MotoTracker")
@@ -13,3 +14,4 @@ app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), na
 app.include_router(router)
 app.include_router(searches_router)
 app.include_router(listings_router)
+app.include_router(scans_router)

@@ -1,5 +1,6 @@
 import asyncio
 import re
+from collections.abc import AsyncGenerator
 from decimal import Decimal, InvalidOperation
 from urllib.parse import quote, urlencode
 
@@ -168,10 +169,10 @@ async def _parse_listings_from_page(page: Page) -> list[ParsedListing]:
     return listings
 
 
-async def scrape_search(filters: dict) -> list[ParsedListing]:
+async def scrape_search(filters: dict) -> AsyncGenerator[tuple[int, list[ParsedListing]], None]:
+    """Async generator yielding (page_num, page_listings) for each scraped page."""
     checker = RobotsChecker(settings.scraper_user_agent)
     throttler = AsyncThrottler(settings.throttle_min_seconds, settings.throttle_jitter_seconds)
-    all_listings: list[ParsedListing] = []
 
     async with async_playwright() as pw:
         browser: Browser = await pw.chromium.launch(headless=True)
@@ -187,15 +188,13 @@ async def scrape_search(filters: dict) -> list[ParsedListing]:
                 page_listings = await _parse_listings_from_page(page)
                 if not page_listings:
                     break
-                all_listings.extend(page_listings)
+                yield page_num, page_listings
 
                 next_btn = await page.query_selector(NEXT_PAGE_LINK)
                 if not next_btn:
                     break
         finally:
             await browser.close()
-
-    return all_listings
 
 
 async def check_listing_exists(url: str, throttler: AsyncThrottler | None = None) -> bool:

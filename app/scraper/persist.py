@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from datetime import datetime, timezone
 from math import floor
@@ -12,6 +11,7 @@ from app.models.price_point import PricePoint
 from app.models.saved_search import SavedSearch
 from app.models.scan import Scan
 from app.scraper.engine import check_listing_exists, scrape_search
+from app.scraper.events import cleanup, emit
 from app.scraper.throttle import AsyncThrottler
 
 logger = logging.getLogger(__name__)
@@ -35,19 +35,25 @@ def _fuzzy_key(listing: Listing) -> tuple | None:
     return (listing.make, listing.model, listing.year, bucket, listing.seller_id)
 
 
-async def run_scan(saved_search_id: int) -> None:
+async def run_scan(saved_search_id: int, existing_scan: Scan | None = None) -> None:
     db: Session = SessionLocal()
-    scan = Scan(saved_search_id=saved_search_id, started_at=_now(), status="running")
-    try:
+    if existing_scan is not None:
+        # Route pre-created the scan row; merge it into this session.
+        scan = db.merge(existing_scan)
+    else:
+        scan = Scan(saved_search_id=saved_search_id, started_at=_now(), status="running")
         db.add(scan)
         db.commit()
         db.refresh(scan)
+    try:
+        scan_id = scan.id
 
         search: SavedSearch | None = db.get(SavedSearch, saved_search_id)
         if search is None:
             scan.status = "failed"
             scan.error_summary = "SavedSearch not found"
             db.commit()
+            emit(scan_id, {"type": "failed", "error": "SavedSearch not found"})
             return
 
         filters = {
@@ -58,12 +64,6 @@ async def run_scan(saved_search_id: int) -> None:
             "country_of_origin": search.country_of_origin,
             "condition": search.condition,
         }
-
-        listings = await scrape_search(filters)
-
-        result_count = 0
-        now = _now()
-        seen_ids: set[str] = set()
 
         # Build fuzzy-match index of confirmed_sold listings for this search.
         sold_listings: list[Listing] = (
@@ -77,12 +77,21 @@ async def run_scan(saved_search_id: int) -> None:
             if key is not None:
                 sold_by_key[key] = sl
 
-        for pl in listings:
+        result_count = 0
+        now = _now()
+        seen_ids: set[str] = set()
+        all_listings = []
+
+        async for page_num, page_listings in scrape_search(filters):
+            all_listings.extend(page_listings)
+            result_count += len(page_listings)
+            emit(scan_id, {"type": "page", "page": page_num, "listings_so_far": result_count})
+
+        for pl in all_listings:
             seen_ids.add(pl.otomoto_id)
             existing: Listing | None = db.get(Listing, pl.otomoto_id)
             if existing:
                 existing.last_seen_at = now
-                # Re-activate if it had been marked sold/likely_sold.
                 if existing.status in ("likely_sold", "confirmed_sold"):
                     existing.status = "active"
                     existing.sold_at = None
@@ -100,14 +109,13 @@ async def run_scan(saved_search_id: int) -> None:
                     db.add(
                         PricePoint(
                             listing_id=pl.otomoto_id,
-                            scan_id=scan.id,
+                            scan_id=scan_id,
                             price=float(pl.price),
                             currency=pl.currency,
                             observed_at=now,
                         )
                     )
             else:
-                # Fuzzy match against confirmed_sold listings.
                 candidate_key = (
                     search.make,
                     search.model,
@@ -145,13 +153,12 @@ async def run_scan(saved_search_id: int) -> None:
                     db.add(
                         PricePoint(
                             listing_id=pl.otomoto_id,
-                            scan_id=scan.id,
+                            scan_id=scan_id,
                             price=float(pl.price),
                             currency=pl.currency,
                             observed_at=now,
                         )
                     )
-            result_count += 1
 
         db.commit()
 
@@ -171,7 +178,8 @@ async def run_scan(saved_search_id: int) -> None:
                 min_seconds=settings.throttle_min_seconds,
                 jitter_seconds=settings.throttle_jitter_seconds,
             )
-            for listing in disappeared:
+            total_rechecks = len(disappeared)
+            for i, listing in enumerate(disappeared, 1):
                 try:
                     still_up = await check_listing_exists(listing.url, throttler=throttler)
                     if still_up:
@@ -179,19 +187,21 @@ async def run_scan(saved_search_id: int) -> None:
                         logger.warning(
                             "Listing %s still reachable but not in scan %s results — marked likely_sold",
                             listing.id,
-                            scan.id,
+                            scan_id,
                         )
                     else:
                         listing.status = "confirmed_sold"
                         listing.sold_at = now
                 except Exception as exc:
                     logger.warning("Re-check failed for listing %s: %s", listing.id, exc)
+                emit(scan_id, {"type": "recheck", "checked": i, "total_rechecks": total_rechecks})
             db.commit()
 
         scan.finished_at = _now()
         scan.status = "done"
         scan.result_count = result_count
         db.commit()
+        emit(scan_id, {"type": "done", "listings": result_count})
 
     except Exception as exc:
         try:
@@ -201,6 +211,7 @@ async def run_scan(saved_search_id: int) -> None:
             db.commit()
         except Exception:
             pass
+        emit(scan.id, {"type": "failed", "error": str(exc)[:200]})
         raise
     finally:
         db.close()

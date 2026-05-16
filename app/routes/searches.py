@@ -192,13 +192,30 @@ async def update(
 
 @router.post("/{search_id}/scan")
 async def trigger_scan(search_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    from app.scraper.events import emit, scan_queues
+    import asyncio
+
     search = db.get(SavedSearch, search_id)
     if search is None:
         return HTMLResponse("Not found", status_code=404)
     running = db.query(Scan).filter_by(saved_search_id=search_id, status="running").first()
-    if not running:
-        background_tasks.add_task(run_scan, search_id)
-    return RedirectResponse("/?toast=Scan+started", status_code=303)
+    if running:
+        return RedirectResponse(f"/searches/{search_id}?scan_id={running.id}", status_code=303)
+
+    # Create scan row here so we have the scan_id before the background task starts.
+    from datetime import datetime, timezone
+    from app.models.scan import Scan as ScanModel
+    scan = ScanModel(saved_search_id=search_id, started_at=datetime.now(timezone.utc), status="running")
+    db.add(scan)
+    db.commit()
+    db.refresh(scan)
+    scan_id = scan.id
+
+    # Initialise the queue so the SSE route finds it immediately.
+    scan_queues[scan_id] = asyncio.Queue()
+
+    background_tasks.add_task(run_scan, search_id, scan)
+    return RedirectResponse(f"/searches/{search_id}?scan_id={scan_id}", status_code=303)
 
 
 @router.post("/{search_id}/delete")
