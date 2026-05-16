@@ -29,5 +29,9 @@ class Listing(Base):
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
     status: Mapped[str] = mapped_column(String, nullable=False, default="active")
+    sold_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    relisted_from_listing_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("listing.id", ondelete="SET NULL"), nullable=True
+    )
 
     price_points: Mapped[list["PricePoint"]] = relationship("PricePoint", back_populates="listing", order_by="PricePoint.observed_at")  # noqa: F821

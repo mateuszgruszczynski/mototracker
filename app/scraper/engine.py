@@ -198,7 +198,9 @@ async def scrape_search(filters: dict) -> list[ParsedListing]:
     return all_listings
 
 
-async def check_listing_exists(url: str) -> bool:
+async def check_listing_exists(url: str, throttler: AsyncThrottler | None = None) -> bool:
+    if throttler is not None:
+        await throttler.wait()
     headers = {"User-Agent": settings.scraper_user_agent}
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
