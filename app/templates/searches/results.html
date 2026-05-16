@@ -66,7 +66,7 @@ function scanProgress(scanId) {
                     this.statusText = 'Scan complete — ' + d.listings + ' listings.';
                     this.done = true;
                     es.close();
-                    setTimeout(() => location.reload(), 1000);
+                    setTimeout(() => window.location.href = window.location.pathname, 1000);
                 } else if (d.type === 'failed') {
                     this.errorText = 'Scan failed: ' + d.error;
                     this.statusText = 'Scan failed.';
