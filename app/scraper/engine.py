@@ -37,18 +37,22 @@ def _build_search_url(filters: dict, page: int = 1) -> str:
     def slugify(s: str) -> str:
         return quote(s.replace(" ", "-"), safe="-")
 
-    path = f"{BASE_URL}{SEARCH_PATH}/{slugify(make)}/{slugify(model)}/"
+    # Year from is encoded as a path segment (od-YEAR) per Otomoto's URL scheme.
+    year_from = filters.get("year_from")
+    year_segment = f"od-{year_from}" if year_from else ""
+    path = f"{BASE_URL}{SEARCH_PATH}/{slugify(make)}/{slugify(model)}/{year_segment}"
+    if not year_segment:
+        path = path.rstrip("/") + "/"
+
     params: dict[str, str] = {"page": str(page)}
-    if filters.get("year_from"):
-        params["search[filter_float_year:from]"] = str(filters["year_from"])
     if filters.get("year_to"):
         params["search[filter_float_year:to]"] = str(filters["year_to"])
     if filters.get("country_of_origin"):
-        params["search[filter_enum_country_origin][0]"] = filters["country_of_origin"]
+        params["search[filter_enum_country_origin]"] = filters["country_of_origin"].lower()
     if filters.get("condition") == "nie-uszkodzony":
-        params["search[filter_enum_no_accident][0]"] = "1"
+        params["search[filter_enum_damaged]"] = "0"
     elif filters.get("condition") == "uszkodzony":
-        params["search[filter_enum_no_accident][0]"] = "0"
+        params["search[filter_enum_damaged]"] = "1"
     return f"{path}?{urlencode(params)}"
 
 
