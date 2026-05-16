@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}{{ search.name }} — MotoTracker{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">{{ search.name }}</h1>
+        <p class="text-sm text-gray-500 mt-1">
+            {{ search.make }} {{ search.model }}
+            {% if search.year_from or search.year_to %}
+            &nbsp;·&nbsp; {{ search.year_from or "–" }}–{{ search.year_to or "–" }}
+            {% endif %}
+        </p>
+    </div>
+    <div class="flex gap-3">
+        <form method="post" action="/searches/{{ search.id }}/scan">
+            <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm font-medium">Run Scan</button>
+        </form>
+        <a href="/" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm">← Back</a>
+    </div>
+</div>
+
+{% if last_scan %}
+<p class="text-xs text-gray-400 mb-4">
+    Last scan: {{ last_scan.finished_at.strftime('%Y-%m-%d %H:%M') }} UTC &nbsp;·&nbsp; {{ total }} listing{{ 's' if total != 1 else '' }}
+</p>
+{% else %}
+<p class="text-xs text-amber-500 mb-4">No completed scan yet. Click Run Scan to fetch results.</p>
+{% endif %}
+
+{% if total == 0 %}
+<div class="text-center py-16 text-gray-400">
+    <p>No active listings found for this search.</p>
+</div>
+{% else %}
+
+<div x-data="resultsTable()" class="bg-white rounded-lg shadow overflow-x-auto">
+<table class="w-full text-sm">
+    <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
+        <tr>
+            <th class="px-4 py-3 text-left min-w-48">Title</th>
+            <th class="px-4 py-3 text-right cursor-pointer select-none hover:text-blue-600"
+                @click="sort('year')">
+                Year <span x-text="sortKey==='year' ? (sortAsc?'▲':'▼') : ''"></span>
+            </th>
+            <th class="px-4 py-3 text-right cursor-pointer select-none hover:text-blue-600"
+                @click="sort('mileage')">
+                Mileage <span x-text="sortKey==='mileage' ? (sortAsc?'▲':'▼') : ''"></span>
+            </th>
+            <th class="px-4 py-3 text-right cursor-pointer select-none hover:text-blue-600"
+                @click="sort('price')">
+                Price <span x-text="sortKey==='price' ? (sortAsc?'▲':'▼') : ''"></span>
+            </th>
+            <th class="px-4 py-3 text-left">Change</th>
+            <th class="px-4 py-3 text-left">Location</th>
+            <th class="px-4 py-3 text-left">Last seen</th>
+            <th class="px-4 py-3 text-left">Links</th>
+        </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100">
+        <template x-for="r in sortedRows" :key="r.id">
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 font-medium text-gray-900 max-w-xs truncate">
+                    <a :href="'/listings/' + r.id" class="hover:text-blue-600" x-text="r.title"></a>
+                </td>
+                <td class="px-4 py-3 text-right text-gray-600" x-text="r.year ?? '–'"></td>
+                <td class="px-4 py-3 text-right text-gray-600" x-text="r.mileage_fmt"></td>
+                <td class="px-4 py-3 text-right font-medium" x-text="r.price_fmt"></td>
+                <td class="px-4 py-3">
+                    <span x-show="r.badge_text"
+                          :class="{
+                            'bg-blue-100 text-blue-700': r.badge_color === 'blue',
+                            'bg-gray-100 text-gray-500': r.badge_color === 'gray',
+                            'bg-green-100 text-green-700': r.badge_color === 'green',
+                            'bg-red-100 text-red-700': r.badge_color === 'red'
+                          }"
+                          class="px-2 py-0.5 rounded text-xs font-medium"
+                          x-text="r.badge_text"></span>
+                </td>
+                <td class="px-4 py-3 text-gray-500 text-xs" x-text="r.location"></td>
+                <td class="px-4 py-3 text-gray-400 text-xs" x-text="r.last_seen"></td>
+                <td class="px-4 py-3">
+                    <a :href="r.url" target="_blank" rel="noopener"
+                       class="text-blue-500 hover:text-blue-700 text-xs">Otomoto ↗</a>
+                </td>
+            </tr>
+        </template>
+    </tbody>
+</table>
+</div>
+
+<script>
+const _rows = {{ rows_json | safe }};
+function resultsTable() {
+    return {
+        rows: _rows,
+        sortKey: 'price',
+        sortAsc: false,
+        get sortedRows() {
+            return [...this.rows].sort((a, b) => {
+                const av = a[this.sortKey] ?? (this.sortAsc ? Infinity : -Infinity);
+                const bv = b[this.sortKey] ?? (this.sortAsc ? Infinity : -Infinity);
+                return this.sortAsc ? av - bv : bv - av;
+            });
+        },
+        sort(key) {
+            if (this.sortKey === key) { this.sortAsc = !this.sortAsc; }
+            else { this.sortKey = key; this.sortAsc = false; }
+        }
+    };
+}
+</script>
+
+{% endif %}
+{% endblock %}
