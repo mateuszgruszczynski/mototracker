@@ -1,6 +1,6 @@
 # Change State
 
 title: Country of origin and condition search filter fields
-status: IN_PROGRESS
-current_phase: Refinement
+status: DONE
+current_phase: DONE
 slug: country-condition-search-filter
