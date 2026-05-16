@@ -42,10 +42,6 @@ def _build_search_url(filters: dict, page: int = 1) -> str:
         params["search[filter_float_year:from]"] = str(filters["year_from"])
     if filters.get("year_to"):
         params["search[filter_float_year:to]"] = str(filters["year_to"])
-    if filters.get("country_of_origin"):
-        params["search[filter_enum_country_origin][0]"] = filters["country_of_origin"]
-    if filters.get("condition"):
-        params["search[filter_enum_damaged]"] = "0"
     return f"{path}?{urlencode(params)}"
 
 

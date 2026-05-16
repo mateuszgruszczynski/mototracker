@@ -3,7 +3,7 @@
 status: IN_PROGRESS
 mode: greenfield
 version: unreleased
-current_phase: Refinement
+current_phase: Retrospective
 current_epic: Scan Execution & Persistence
 iteration: 4
 
