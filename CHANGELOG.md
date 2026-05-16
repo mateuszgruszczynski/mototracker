@@ -1,5 +1,15 @@
 # Changelog
 
+## [Iteration 007] — Sold Detection & Re-listing Match — 2026-05-16
+
+### Added
+- After each scan, disappeared `active`/`likely_sold` listings are re-checked via httpx HEAD: 404 → `confirmed_sold` + `sold_at` timestamp; still reachable → `likely_sold` with WARNING log
+- New listings fuzzy-matched (make+model+year+mileage_bucket+seller_id) against `confirmed_sold` rows; `relisted_from_listing_id` set on match
+- Re-appearing listings automatically reset to `active` with `sold_at` cleared
+- `listing.sold_at` and `listing.relisted_from_listing_id` columns (Alembic migration #4)
+
+Retro: iterations/007-sold-detection-re-listing-match/i7-retro.md
+
 ## [Iteration 006] — Car Detail & Price-History Chart — 2026-05-16
 
 ### Added

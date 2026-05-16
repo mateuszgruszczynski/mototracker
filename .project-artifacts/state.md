@@ -5,7 +5,7 @@ mode: greenfield
 version: unreleased
 current_phase: Idle
 current_epic:
-iteration: 7
+iteration: 8
 
 ## Phase enums
 
@@ -29,7 +29,7 @@ iteration: 7
 | P1 | Scan Execution & Persistence | M | DONE |
 | P1 | Search Results View | S | DONE |
 | P1 | Car Detail & Price-History Chart | M | DONE |
-| P1 | Sold Detection & Re-listing Match | M | TODO |
+| P1 | Sold Detection & Re-listing Match | M | DONE |
 | P2 | UI Polish & Navigation | S | TODO |
 | P2 | Scan Progress Streaming (SSE) | S | TODO |
 
@@ -42,6 +42,7 @@ iteration: 7
 | 004 | Scan Execution & Persistence | DONE | 2026-05-16 | Country/condition URL filters dropped; 32 listings live | iterations/004-scan-execution-persistence/i7-retro.md |
 | 005 | Search Results View | DONE | 2026-05-16 | No plan changes | iterations/005-search-results-view/i7-retro.md |
 | 006 | Car Detail & Price-History Chart | DONE | 2026-05-16 | No plan changes | iterations/006-car-detail-price-history-chart/i7-retro.md |
+| 007 | Sold Detection & Re-listing Match | DONE | 2026-05-16 | No plan changes | iterations/007-sold-detection-re-listing-match/i7-retro.md |
 
 ## Releases
 | Version | Date | Iterations | Notes |
