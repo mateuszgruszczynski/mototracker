@@ -8,7 +8,7 @@
   "remoteEnv": {
     "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
   },
-  "postCreateCommand": "claude plugin marketplace add mateuszgruszczynski/agile-dev-pipeline 2>/dev/null; claude plugin install agile-dev@agile-dev",
+  "postCreateCommand": "claude plugin marketplace add mateuszgruszczynski/agile-dev-pipeline 2>/dev/null; claude plugin install agile-dev@agile-dev; uv sync; uv run playwright install chromium",
   "forwardPorts": [8000],
   "customizations": {
     "vscode": {
