@@ -14,7 +14,7 @@ class Listing(Base):
     __tablename__ = "listing"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
-    saved_search_id: Mapped[int] = mapped_column(Integer, ForeignKey("saved_search.id", ondelete="SET NULL"), nullable=True)
+    saved_search_id: Mapped[int] = mapped_column(Integer, ForeignKey("saved_search.id", ondelete="CASCADE"), nullable=True)
     make: Mapped[str | None] = mapped_column(String, nullable=True)
     model: Mapped[str | None] = mapped_column(String, nullable=True)
     year: Mapped[int | None] = mapped_column(Integer, nullable=True)
