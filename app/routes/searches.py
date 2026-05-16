@@ -67,11 +67,14 @@ async def create(
     model: str = Form(""),
     year_from: str = Form(""),
     year_to: str = Form(""),
+    country_of_origin: str = Form(""),
+    condition: str = Form(""),
     db: Session = Depends(get_db),
 ):
     errors = _validate(name, make, model)
     if errors:
-        values = {"name": name, "make": make, "model": model, "year_from": year_from, "year_to": year_to}
+        values = {"name": name, "make": make, "model": model, "year_from": year_from, "year_to": year_to,
+                  "country_of_origin": country_of_origin, "condition": condition}
         return templates.TemplateResponse(request, "searches/form.html", {"errors": errors, "values": values})
 
     search = SavedSearch(
@@ -80,6 +83,8 @@ async def create(
         model=model.strip(),
         year_from=int(year_from) if year_from.strip() else None,
         year_to=int(year_to) if year_to.strip() else None,
+        country_of_origin=country_of_origin,
+        condition=condition,
     )
     db.add(search)
     db.commit()
@@ -154,6 +159,8 @@ async def edit_form(request: Request, search_id: int, db: Session = Depends(get_
         "model": search.model,
         "year_from": search.year_from or "",
         "year_to": search.year_to or "",
+        "country_of_origin": search.country_of_origin,
+        "condition": search.condition,
     }
     return templates.TemplateResponse(request, "searches/form.html", {"errors": {}, "values": values, "search": search})
 
@@ -167,6 +174,8 @@ async def update(
     model: str = Form(""),
     year_from: str = Form(""),
     year_to: str = Form(""),
+    country_of_origin: str = Form(""),
+    condition: str = Form(""),
     db: Session = Depends(get_db),
 ):
     search = db.get(SavedSearch, search_id)
@@ -175,7 +184,8 @@ async def update(
 
     errors = _validate(name, make, model)
     if errors:
-        values = {"name": name, "make": make, "model": model, "year_from": year_from, "year_to": year_to}
+        values = {"name": name, "make": make, "model": model, "year_from": year_from, "year_to": year_to,
+                  "country_of_origin": country_of_origin, "condition": condition}
         return templates.TemplateResponse(
             request, "searches/form.html", {"errors": errors, "values": values, "search": search}
         )
@@ -185,6 +195,8 @@ async def update(
     search.model = model.strip()
     search.year_from = int(year_from) if year_from.strip() else None
     search.year_to = int(year_to) if year_to.strip() else None
+    search.country_of_origin = country_of_origin
+    search.condition = condition
     search.updated_at = datetime.now(timezone.utc)
     db.commit()
     return RedirectResponse("/?toast=Search+updated", status_code=303)

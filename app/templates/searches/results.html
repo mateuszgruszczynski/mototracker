@@ -18,6 +18,12 @@
             {% if search.year_from or search.year_to %}
             &nbsp;·&nbsp; {{ search.year_from or "–" }}–{{ search.year_to or "–" }}
             {% endif %}
+            {% if search.country_of_origin %}
+            &nbsp;·&nbsp; {{ search.country_of_origin }}
+            {% endif %}
+            {% if search.condition %}
+            &nbsp;·&nbsp; {{ "Not damaged" if search.condition == "nie-uszkodzony" else "Damaged" }}
+            {% endif %}
         </p>
     </div>
     <form method="post" action="/searches/{{ search.id }}/scan">
