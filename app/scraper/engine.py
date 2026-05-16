@@ -13,16 +13,17 @@ from app.scraper.selectors import (
     BASE_URL,
     CAPTCHA_INDICATORS,
     LISTING_CARD,
+    LISTING_CURRENCY,
     LISTING_ID_ATTR,
     LISTING_LINK,
     LISTING_LOCATION,
-    LISTING_PARAMS_CONTAINER,
     LISTING_PARAM_ITEM,
+    LISTING_PARAMS_CONTAINER,
     LISTING_PRICE,
     LISTING_SELLER_ID,
     LISTING_TITLE,
     NEXT_PAGE_LINK,
-    PARAM_LABEL_MAP,
+    PARAM_POSITION_MAP,
     SEARCH_PATH,
 )
 from app.scraper.throttle import AsyncThrottler
@@ -48,22 +49,12 @@ def _build_search_url(filters: dict, page: int = 1) -> str:
     return f"{path}?{urlencode(params)}"
 
 
-def _parse_price(text: str) -> tuple[Decimal | None, str]:
-    text = text.strip()
-    currency = "PLN"
-    for cur in ("EUR", "USD", "PLN"):
-        if cur in text:
-            currency = cur
-            break
-    digits = re.sub(r"[^\d,.]", "", text).replace(",", ".")
+def _parse_price(text: str) -> Decimal | None:
+    digits = re.sub(r"[^\d]", "", text.strip())
     try:
-        return Decimal(digits), currency
+        return Decimal(digits) if digits else None
     except InvalidOperation:
-        return None, currency
-
-
-def _parse_params(page_content: str) -> dict[str, str]:
-    return {}
+        return None
 
 
 async def _navigate_with_retry(page: Page, url: str, throttler: AsyncThrottler, max_retries: int = 2) -> None:
@@ -110,24 +101,30 @@ async def _parse_listings_from_page(page: Page) -> list[ParsedListing]:
             url = (await link_el.get_attribute("href") if link_el else None) or ""
             if url and not url.startswith("http"):
                 url = BASE_URL + url
+            if not url:
+                link_el2 = await card.query_selector("a[href]")
+                url = (await link_el2.get_attribute("href") if link_el2 else None) or ""
 
             title_el = await card.query_selector(LISTING_TITLE)
             title = (await title_el.inner_text() if title_el else "").strip()
 
             price_el = await card.query_selector(LISTING_PRICE)
             price_text = (await price_el.inner_text() if price_el else "").strip()
-            price, currency = _parse_price(price_text)
+            price = _parse_price(price_text)
+
+            currency_el = await card.query_selector(LISTING_CURRENCY)
+            currency = (await currency_el.inner_text() if currency_el else "PLN").strip()
+            if currency not in ("PLN", "EUR", "USD"):
+                currency = "PLN"
 
             location_el = await card.query_selector(LISTING_LOCATION)
             location_text = (await location_el.inner_text() if location_el else "").strip()
-            location = location_text.split("\n")[0].strip() if location_text else None
+            location = location_text.split("(")[0].strip() if location_text else None
 
             seller_el = await card.query_selector(LISTING_SELLER_ID)
-            seller_id = (
-                await seller_el.get_attribute("data-seller-id") or await seller_el.get_attribute("data-sna-id")
-                if seller_el
-                else None
-            )
+            seller_id = None
+            if seller_el:
+                seller_id = await seller_el.get_attribute("data-seller-id") or await seller_el.get_attribute("data-sna-id")
 
             params_el = await card.query_selector(LISTING_PARAMS_CONTAINER)
             year: int | None = None
@@ -137,30 +134,19 @@ async def _parse_listings_from_page(page: Page) -> list[ParsedListing]:
 
             if params_el:
                 items = await params_el.query_selector_all(LISTING_PARAM_ITEM)
-                param_texts = [((await el.inner_text()).strip().lower()) for el in items]
-                for i, text in enumerate(param_texts):
-                    for label, field in PARAM_LABEL_MAP.items():
-                        if label in text:
-                            value = param_texts[i + 1] if i + 1 < len(param_texts) else text.replace(label, "").strip()
-                            if field == "year":
-                                m = re.search(r"\d{4}", value)
-                                year = int(m.group()) if m else None
-                            elif field == "mileage":
-                                digits = re.sub(r"\D", "", value)
-                                mileage = int(digits) if digits else None
-                            elif field == "fuel":
-                                fuel = value
-                            elif field == "gearbox":
-                                gearbox = value
-                            break
-                if not year and not mileage:
-                    for text in param_texts:
-                        m = re.match(r"^(\d{4})$", text)
-                        if m:
-                            year = int(m.group(1))
-                        km_m = re.search(r"(\d[\d\s]+)\s*km", text)
-                        if km_m:
-                            mileage = int(re.sub(r"\s", "", km_m.group(1)))
+                for idx, el in enumerate(items):
+                    raw = (await el.inner_text()).strip()
+                    field = PARAM_POSITION_MAP.get(idx)
+                    if field == "mileage":
+                        digits = re.sub(r"\D", "", raw)
+                        mileage = int(digits) if digits else None
+                    elif field == "fuel":
+                        fuel = raw
+                    elif field == "gearbox":
+                        gearbox = raw
+                    elif field == "year":
+                        m = re.search(r"\d{4}", raw)
+                        year = int(m.group()) if m else None
 
             listings.append(
                 ParsedListing(

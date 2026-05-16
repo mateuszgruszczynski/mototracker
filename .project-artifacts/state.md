@@ -4,8 +4,8 @@ status: IN_PROGRESS
 mode: greenfield
 version: unreleased
 current_phase: Refinement
-current_epic: Saved Searches CRUD
-iteration: 2
+current_epic: Scan Execution & Persistence
+iteration: 4
 
 ## Phase enums
 
@@ -24,8 +24,8 @@ iteration: 2
 | Priority | Epic | Size | Status |
 |---|---|---|---|
 | P1 | Project Scaffold | S | DONE |
-| P1 | Saved Searches CRUD | S | TODO |
-| P1 | Otomoto Scraper Engine | L | TODO |
+| P1 | Saved Searches CRUD | S | DONE |
+| P1 | Otomoto Scraper Engine | L | DONE |
 | P1 | Scan Execution & Persistence | M | TODO |
 | P1 | Search Results View | S | TODO |
 | P1 | Car Detail & Price-History Chart | M | TODO |
@@ -37,6 +37,8 @@ iteration: 2
 | # | Epic | Status | Closed | Notes | Retro |
 |---|---|---|---|---|---|
 | 001 | Project Scaffold | DONE | 2026-05-15 | No plan changes | iterations/001-project-scaffold/i7-retro.md |
+| 002 | Saved Searches CRUD | DONE | 2026-05-15 | No plan changes | iterations/002-saved-searches-crud/i7-retro.md |
+| 003 | Otomoto Scraper Engine | DONE | 2026-05-16 | Selector tuning deferred to E4 | iterations/003-otomoto-scraper-engine/i7-retro.md |
 
 ## Releases
 | Version | Date | Iterations | Notes |

@@ -20,6 +20,7 @@
                 <th class="px-4 py-3 text-left">Make</th>
                 <th class="px-4 py-3 text-left">Model</th>
                 <th class="px-4 py-3 text-left">Years</th>
+                <th class="px-4 py-3 text-left">Scan</th>
                 <th class="px-4 py-3 text-left">Actions</th>
             </tr>
         </thead>
@@ -34,6 +35,18 @@
                         {{ s.year_from or "–" }} – {{ s.year_to or "–" }}
                     {% else %}
                         Any
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                    {% if s.id in running_ids %}
+                    <span class="text-gray-400 text-xs">Scanning…</span>
+                    {% else %}
+                    <form method="post" action="/searches/{{ s.id }}/scan">
+                        <button type="submit"
+                                class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">
+                            Run Scan
+                        </button>
+                    </form>
                     {% endif %}
                 </td>
                 <td class="px-4 py-3 flex gap-3">

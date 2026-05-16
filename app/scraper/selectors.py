@@ -4,23 +4,28 @@
 # Search result page — listing cards
 LISTING_CARD = "article[data-id]"
 LISTING_ID_ATTR = "data-id"
-LISTING_LINK = "h2 a[href], a.ooa-1n2s58e[href], article a[href]"
+LISTING_LINK = "h2 a[href], article a[href*='otomoto.pl/osobowe/oferta']"
 LISTING_TITLE = "h2"
-LISTING_PRICE = "[data-testid='ad-price'], .ooa-1bmnv3, span[class*='price']"
-LISTING_CURRENCY = LISTING_PRICE  # currency text is adjacent to price number
+LISTING_PRICE = "h3"
+LISTING_CURRENCY = "p:has-text('PLN'), p:has-text('EUR'), p:has-text('USD')"
 
-# Listing card parameters (year, mileage, fuel, gearbox)
-LISTING_PARAMS_CONTAINER = "ul[class*='params'], dl[class*='params']"
-LISTING_PARAM_ITEM = "li, dd"
+# Listing card parameters (mileage, fuel, gearbox, year) — Otomoto uses <dd> elements
+LISTING_PARAMS_CONTAINER = "dl"
+LISTING_PARAM_ITEM = "dd"
 
-LISTING_LOCATION = "[class*='location'], [data-testid='location-date']"
+LISTING_LOCATION = 'li:has-text("(")'  # location li contains region in parentheses
 LISTING_SELLER_ID = "[data-seller-id], [data-sna-id]"
 
-# Pagination
-NEXT_PAGE_LINK = "a[data-testid='pagination-next'], a[aria-label='Next Page'], li.next a"
+# Pagination — Otomoto uses numbered page buttons
+NEXT_PAGE_LINK = (
+    "a[aria-label='Next Page'], "
+    "[data-testid='pagination-next'], "
+    "a[rel='next'], "
+    "li.pagination__item--next a"
+)
 
 # Captcha detection (page title or element when blocked)
-CAPTCHA_INDICATORS = ["captcha", "robot", "challenge", "cloudflare"]
+CAPTCHA_INDICATORS = ["captcha", "robot", "challenge", "cloudflare", "access denied"]
 
 # Otomoto base URL and search path
 BASE_URL = "https://www.otomoto.pl"
@@ -29,10 +34,6 @@ SEARCH_PATH = "/osobowe"  # passenger cars
 # robots.txt location
 ROBOTS_URL = f"{BASE_URL}/robots.txt"
 
-# Known Otomoto parameter labels (Polish) → field mapping
-PARAM_LABEL_MAP: dict[str, str] = {
-    "rok produkcji": "year",
-    "przebieg": "mileage",
-    "rodzaj paliwa": "fuel",
-    "skrzynia biegów": "gearbox",
-}
+# Parameter value patterns — direct positional parsing of <dd> elements
+# Otomoto <dl> inside a card has 4 <dd> in order: mileage, fuel, gearbox, year
+PARAM_POSITION_MAP = {0: "mileage", 1: "fuel", 2: "gearbox", 3: "year"}

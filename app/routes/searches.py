@@ -1,13 +1,15 @@
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.saved_search import SavedSearch
+from app.models.scan import Scan
+from app.scraper.persist import run_scan
 
 templates = Jinja2Templates(directory=Path(__file__).parent.parent / "templates")
 
@@ -90,6 +92,17 @@ async def update(
     search.year_to = int(year_to) if year_to.strip() else None
     search.updated_at = datetime.now(timezone.utc)
     db.commit()
+    return RedirectResponse("/", status_code=303)
+
+
+@router.post("/{search_id}/scan")
+async def trigger_scan(search_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    search = db.get(SavedSearch, search_id)
+    if search is None:
+        return HTMLResponse("Not found", status_code=404)
+    running = db.query(Scan).filter_by(saved_search_id=search_id, status="running").first()
+    if not running:
+        background_tasks.add_task(run_scan, search_id)
     return RedirectResponse("/", status_code=303)
 
 
