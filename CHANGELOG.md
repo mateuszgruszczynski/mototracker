@@ -1,5 +1,19 @@
 # Changelog
 
+## [Iteration 008] — UI Polish & Navigation — 2026-05-16
+
+### Added
+- Top nav: "Searches" link + "New Search" button visible on every page
+- Breadcrumbs: `Home › Search Name` on results page; `Home › Search Name › Listing Title` on detail page
+- Toast notifications: stateless `?toast=` query param, auto-dismiss after 3 s (Alpine.js)
+- Styled empty states on results page: "No scan yet" and "No active listings"
+- CSS `animate-spin` spinner for running scans (replaces plain text)
+
+### Changed
+- `max-w-4xl` applied consistently to header and main content across all pages
+
+Retro: iterations/008-ui-polish-navigation/i7-retro.md
+
 ## [Iteration 007] — Sold Detection & Re-listing Match — 2026-05-16
 
 ### Added
