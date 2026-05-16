@@ -1,5 +1,23 @@
 # Changelog
 
+## [Iteration 006] — Car Detail & Price-History Chart — 2026-05-16
+
+### Added
+- `GET /listings/{otomoto_id}` detail page with metadata grid (year, mileage, fuel, gearbox, location, VIN, seller, first_seen), status badge, and Otomoto external link
+- Chart.js line chart of price history (rendered when ≥2 price points exist)
+- Scan history table with per-row price delta badges (↑ red / ↓ green)
+
+Retro: iterations/006-car-detail-price-history-chart/i7-retro.md
+
+## [Iteration 005] — Search Results View — 2026-05-16
+
+### Added
+- `GET /searches/{id}` results page: sortable table (price/mileage/year) with price-change badges (New/same/↑/↓)
+- Home page search names link to results page
+- Scan header with timestamp and listing count; empty states
+
+Retro: iterations/005-search-results-view/i7-retro.md
+
 ## [Iteration 004] — Scan Execution & Persistence — 2026-05-16
 
 ### Added
