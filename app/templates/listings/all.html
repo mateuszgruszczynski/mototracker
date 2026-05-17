@@ -1,106 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %}{{ search.name }} — MotoTracker{% endblock %}
+{% block title %}All Listings — MotoTracker{% endblock %}
 
 {% block content %}
-<!-- Breadcrumb -->
-<nav class="text-sm text-gray-400 mb-4">
-    <a href="/" class="hover:text-gray-600">Home</a>
-    <span class="mx-1">›</span>
-    <span class="text-gray-700">{{ search.name }}</span>
-</nav>
-
 <div class="flex items-center justify-between mb-4">
-    <div>
-        <h1 class="text-2xl font-bold text-gray-800">{{ search.name }}</h1>
-        <p class="text-sm text-gray-500 mt-1">
-            {{ search.make }} {{ search.model }}
-            {% if search.year_from or search.year_to %}
-            &nbsp;·&nbsp; {{ search.year_from or "–" }}–{{ search.year_to or "–" }}
-            {% endif %}
-            {% if search.mileage_to %}
-            &nbsp;·&nbsp; max {{ "{:,}".format(search.mileage_to).replace(",", " ") }} km
-            {% endif %}
-            {% if search.country_of_origin %}
-            &nbsp;·&nbsp; {{ search.country_of_origin }}
-            {% endif %}
-            {% if search.condition %}
-            &nbsp;·&nbsp; {{ "Not damaged" if search.condition == "nie-uszkodzony" else "Damaged" }}
-            {% endif %}
-        </p>
-    </div>
-    <form method="post" action="/searches/{{ search.id }}/scan">
-        <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm font-medium">Run Scan</button>
-    </form>
+    <h1 class="text-2xl font-bold text-gray-800">All Listings</h1>
+    <span class="text-sm text-gray-400">{{ total }} total</span>
 </div>
 
-{% if last_scan %}
-<p class="text-xs text-gray-400 mb-4">
-    Last scan: {{ last_scan.finished_at.strftime('%Y-%m-%d %H:%M') }} UTC &nbsp;·&nbsp; {{ total }} listing{{ 's' if total != 1 else '' }}
-</p>
-{% endif %}
-
-{% set scan_id = request.query_params.get("scan_id") %}
-{% if scan_id %}
-<div x-data="scanProgress('{{ scan_id }}')"
-     class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4 text-sm text-blue-800"
-     x-show="!done">
-    <div class="flex items-center gap-2">
-        <span class="inline-block w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin flex-shrink-0"></span>
-        <span x-text="statusText">Connecting…</span>
-    </div>
-    <p x-show="errorText" x-text="errorText" class="mt-1 text-red-600 text-xs"></p>
-</div>
-<script>
-function scanProgress(scanId) {
-    return {
-        statusText: 'Connecting…',
-        errorText: '',
-        done: false,
-        init() {
-            const es = new EventSource('/scans/' + scanId + '/stream');
-            es.onmessage = (e) => {
-                const d = JSON.parse(e.data);
-                if (d.type === 'page') {
-                    this.statusText = 'Page ' + d.page + ' — ' + d.listings_so_far + ' listings parsed…';
-                } else if (d.type === 'recheck') {
-                    this.statusText = 'Re-checking: ' + d.checked + ' / ' + d.total_rechecks + '…';
-                } else if (d.type === 'done') {
-                    this.statusText = 'Scan complete — ' + d.listings + ' listings.';
-                    this.done = true;
-                    es.close();
-                    setTimeout(() => window.location.href = window.location.pathname, 1000);
-                } else if (d.type === 'failed') {
-                    this.errorText = 'Scan failed: ' + d.error;
-                    this.statusText = 'Scan failed.';
-                    es.close();
-                }
-            };
-            es.onerror = () => {
-                if (!this.done) this.statusText = 'Connection lost.';
-                es.close();
-            };
-        }
-    };
-}
-</script>
-{% endif %}
-
-{% if not last_scan %}
-<div class="text-center py-16">
-    <p class="text-2xl mb-2">🔍</p>
-    <p class="text-lg font-medium text-gray-600">No scan yet</p>
-    <p class="text-sm text-gray-400 mt-1">Run a scan to fetch listings from Otomoto.</p>
-</div>
-{% elif total == 0 %}
+{% if total == 0 %}
 <div class="text-center py-16">
     <p class="text-2xl mb-2">📭</p>
-    <p class="text-lg font-medium text-gray-600">No listings</p>
-    <p class="text-sm text-gray-400 mt-1">The search returned no results.</p>
+    <p class="text-lg font-medium text-gray-600">No listings yet</p>
+    <p class="text-sm text-gray-400 mt-1">Run a scan on any saved search to populate listings.</p>
 </div>
 {% else %}
 
-<div x-data="resultsTable()">
+<div x-data="allListings()">
 
 <!-- Filter tabs -->
 <div class="flex gap-1 mb-3">
@@ -121,6 +37,7 @@ function scanProgress(scanId) {
     <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
         <tr>
             <th class="px-4 py-3 text-left min-w-48">Title</th>
+            <th class="px-4 py-3 text-left">Search</th>
             <th class="px-4 py-3 text-right cursor-pointer select-none hover:text-blue-600"
                 @click="sort('year')">
                 Year <span x-text="sortKey==='year' ? (sortAsc?'▲':'▼') : ''"></span>
@@ -133,7 +50,6 @@ function scanProgress(scanId) {
                 @click="sort('price')">
                 Price <span x-text="sortKey==='price' ? (sortAsc?'▲':'▼') : ''"></span>
             </th>
-            <th class="px-4 py-3 text-left">Change</th>
             <th class="px-4 py-3 text-left">Status</th>
             <th class="px-4 py-3 text-left">Location</th>
             <th class="px-4 py-3 text-left">Last seen</th>
@@ -148,20 +64,14 @@ function scanProgress(scanId) {
                        :class="r.status === 'confirmed_sold' ? 'line-through text-gray-400 hover:text-gray-600' : 'hover:text-blue-600'"
                        x-text="r.title"></a>
                 </td>
+                <td class="px-4 py-3 text-gray-500 text-xs">
+                    <a x-show="r.search_id" :href="'/searches/' + r.search_id"
+                       class="hover:text-blue-600" x-text="r.search_name"></a>
+                    <span x-show="!r.search_id" class="text-gray-300">–</span>
+                </td>
                 <td class="px-4 py-3 text-right text-gray-600" x-text="r.year ?? '–'"></td>
                 <td class="px-4 py-3 text-right text-gray-600" x-text="r.mileage_fmt"></td>
                 <td class="px-4 py-3 text-right font-medium" x-text="r.price_fmt"></td>
-                <td class="px-4 py-3">
-                    <span x-show="r.badge_text"
-                          :class="{
-                            'bg-blue-100 text-blue-700': r.badge_color === 'blue',
-                            'bg-gray-100 text-gray-500': r.badge_color === 'gray',
-                            'bg-green-100 text-green-700': r.badge_color === 'green',
-                            'bg-red-100 text-red-700': r.badge_color === 'red'
-                          }"
-                          class="px-2 py-0.5 rounded text-xs font-medium"
-                          x-text="r.badge_text"></span>
-                </td>
                 <td class="px-4 py-3">
                     <span x-show="r.status === 'confirmed_sold'"
                           class="px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-500">Sold</span>
@@ -183,7 +93,7 @@ function scanProgress(scanId) {
 
 <script>
 const _rows = {{ rows_json | safe }};
-function resultsTable() {
+function allListings() {
     return {
         rows: _rows,
         tab: 'all',

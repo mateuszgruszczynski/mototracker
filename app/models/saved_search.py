@@ -20,6 +20,7 @@ class SavedSearch(Base):
     model: Mapped[str] = mapped_column(String, nullable=False)
     year_from: Mapped[int | None] = mapped_column(Integer, nullable=True)
     year_to: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    mileage_to: Mapped[int | None] = mapped_column(Integer, nullable=True)
     country_of_origin: Mapped[str] = mapped_column(String, nullable=False, default="PL")
     condition: Mapped[str] = mapped_column(String, nullable=False, default="nie-uszkodzony")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)

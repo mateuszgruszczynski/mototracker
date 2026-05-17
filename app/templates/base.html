@@ -12,9 +12,10 @@
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen">
     <header class="bg-white shadow-sm">
-        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center gap-6">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-6">
             <a href="/" class="text-lg font-semibold text-blue-600 hover:text-blue-800">MotoTracker</a>
             <a href="/" class="text-sm text-gray-600 hover:text-gray-900">Searches</a>
+            <a href="/listings" class="text-sm text-gray-600 hover:text-gray-900">All Listings</a>
             <div class="flex-1"></div>
             <a href="/searches/new"
                class="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 text-sm font-medium">
@@ -23,7 +24,7 @@
         </div>
     </header>
 
-    <main class="max-w-4xl mx-auto px-4 py-8">
+    <main class="max-w-7xl mx-auto px-4 py-8">
         {% block content %}{% endblock %}
     </main>
 

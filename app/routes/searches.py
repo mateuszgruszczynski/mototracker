@@ -13,6 +13,7 @@ from app.models.listing import Listing
 from app.models.price_point import PricePoint
 from app.models.saved_search import SavedSearch
 from app.models.scan import Scan
+from app.scraper.engine import _build_search_url
 from app.scraper.persist import run_scan
 
 templates = Jinja2Templates(directory=Path(__file__).parent.parent / "templates")
@@ -67,6 +68,7 @@ async def create(
     model: str = Form(""),
     year_from: str = Form(""),
     year_to: str = Form(""),
+    mileage_to: str = Form(""),
     country_of_origin: str = Form(""),
     condition: str = Form(""),
     db: Session = Depends(get_db),
@@ -74,7 +76,7 @@ async def create(
     errors = _validate(name, make, model)
     if errors:
         values = {"name": name, "make": make, "model": model, "year_from": year_from, "year_to": year_to,
-                  "country_of_origin": country_of_origin, "condition": condition}
+                  "mileage_to": mileage_to, "country_of_origin": country_of_origin, "condition": condition}
         return templates.TemplateResponse(request, "searches/form.html", {"errors": errors, "values": values})
 
     search = SavedSearch(
@@ -83,6 +85,7 @@ async def create(
         model=model.strip(),
         year_from=int(year_from) if year_from.strip() else None,
         year_to=int(year_to) if year_to.strip() else None,
+        mileage_to=int(mileage_to) if mileage_to.strip() else None,
         country_of_origin=country_of_origin,
         condition=condition,
     )
@@ -108,7 +111,7 @@ async def results(request: Request, search_id: int, db: Session = Depends(get_db
 
     listings = (
         db.query(Listing)
-        .filter_by(saved_search_id=search_id, status="active")
+        .filter_by(saved_search_id=search_id)
         .options(subqueryload(Listing.price_points))
         .all()
     )
@@ -132,6 +135,8 @@ async def results(request: Request, search_id: int, db: Session = Depends(get_db
             "badge_color": badge_color,
             "location": lst.location or "–",
             "last_seen": lst.last_seen_at.strftime("%Y-%m-%d") if lst.last_seen_at else "–",
+            "sold_at": lst.sold_at.strftime("%Y-%m-%d") if lst.sold_at else None,
+            "status": lst.status,
             "url": lst.url,
         })
 
@@ -159,10 +164,20 @@ async def edit_form(request: Request, search_id: int, db: Session = Depends(get_
         "model": search.model,
         "year_from": search.year_from or "",
         "year_to": search.year_to or "",
+        "mileage_to": search.mileage_to or "",
         "country_of_origin": search.country_of_origin,
         "condition": search.condition,
     }
-    return templates.TemplateResponse(request, "searches/form.html", {"errors": {}, "values": values, "search": search})
+    preview_url = _build_search_url({
+        "make": search.make,
+        "model": search.model,
+        "year_from": search.year_from,
+        "year_to": search.year_to,
+        "mileage_to": search.mileage_to,
+        "country_of_origin": search.country_of_origin,
+        "condition": search.condition,
+    })
+    return templates.TemplateResponse(request, "searches/form.html", {"errors": {}, "values": values, "search": search, "preview_url": preview_url})
 
 
 @router.post("/{search_id}", response_class=HTMLResponse)
@@ -174,6 +189,7 @@ async def update(
     model: str = Form(""),
     year_from: str = Form(""),
     year_to: str = Form(""),
+    mileage_to: str = Form(""),
     country_of_origin: str = Form(""),
     condition: str = Form(""),
     db: Session = Depends(get_db),
@@ -185,7 +201,7 @@ async def update(
     errors = _validate(name, make, model)
     if errors:
         values = {"name": name, "make": make, "model": model, "year_from": year_from, "year_to": year_to,
-                  "country_of_origin": country_of_origin, "condition": condition}
+                  "mileage_to": mileage_to, "country_of_origin": country_of_origin, "condition": condition}
         return templates.TemplateResponse(
             request, "searches/form.html", {"errors": errors, "values": values, "search": search}
         )
@@ -195,6 +211,7 @@ async def update(
     search.model = model.strip()
     search.year_from = int(year_from) if year_from.strip() else None
     search.year_to = int(year_to) if year_to.strip() else None
+    search.mileage_to = int(mileage_to) if mileage_to.strip() else None
     search.country_of_origin = country_of_origin
     search.condition = condition
     search.updated_at = datetime.now(timezone.utc)

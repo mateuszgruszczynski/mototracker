@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - mototracker_data:/app/data
+    environment:
+      DATABASE_URL: sqlite:///./data/mototracker.db
+      APP_HOST: 0.0.0.0
+      APP_PORT: "8000"
+    restart: unless-stopped
+
+volumes:
+  mototracker_data:

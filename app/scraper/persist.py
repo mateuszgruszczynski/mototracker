@@ -61,6 +61,7 @@ async def run_scan(saved_search_id: int, existing_scan: Scan | None = None) -> N
             "model": search.model,
             "year_from": search.year_from,
             "year_to": search.year_to,
+            "mileage_to": search.mileage_to,
             "country_of_origin": search.country_of_origin,
             "condition": search.condition,
         }
@@ -162,16 +163,38 @@ async def run_scan(saved_search_id: int, existing_scan: Scan | None = None) -> N
 
         db.commit()
 
-        # Re-check disappeared active/likely_sold listings.
-        disappeared: list[Listing] = (
-            db.query(Listing)
+        # Skip the disappeared check if the scan looks incomplete — fewer results than the
+        # last successful scan suggest a mid-scrape failure, so rechecking would produce
+        # false "likely_sold" marks for listings that simply weren't reached.
+        last_good_scan = (
+            db.query(Scan)
             .filter(
-                Listing.saved_search_id == saved_search_id,
-                Listing.status.in_(("active", "likely_sold")),
-                Listing.id.notin_(seen_ids),
+                Scan.saved_search_id == saved_search_id,
+                Scan.status == "done",
+                Scan.result_count.isnot(None),
+                Scan.id != scan_id,
             )
-            .all()
+            .order_by(Scan.id.desc())
+            .first()
         )
+        if last_good_scan and last_good_scan.result_count and result_count < last_good_scan.result_count * 0.8:
+            logger.warning(
+                "Scan %s found %d results vs last good scan %d (%d) — skipping disappeared check "
+                "to avoid false sold marks",
+                scan_id, result_count, last_good_scan.id, last_good_scan.result_count,
+            )
+            disappeared = []
+        else:
+            # Re-check disappeared active/likely_sold listings.
+            disappeared = (
+                db.query(Listing)
+                .filter(
+                    Listing.saved_search_id == saved_search_id,
+                    Listing.status.in_(("active", "likely_sold")),
+                    Listing.id.notin_(seen_ids),
+                )
+                .all()
+            )
 
         if disappeared:
             throttler = AsyncThrottler(

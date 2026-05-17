@@ -50,6 +50,8 @@ def _build_search_url(filters: dict, page: int = 1) -> str:
     params: dict[str, str] = {"page": str(page)}
     if filters.get("year_to"):
         params["search[filter_float_year:to]"] = str(filters["year_to"])
+    if filters.get("mileage_to"):
+        params["search[filter_float_mileage:to]"] = str(filters["mileage_to"])
     if filters.get("country_of_origin"):
         params["search[filter_enum_country_origin]"] = filters["country_of_origin"].lower()
     if filters.get("condition") == "nie-uszkodzony":
@@ -98,80 +100,92 @@ async def _navigate_with_retry(page: Page, url: str, throttler: AsyncThrottler, 
 
 
 async def _parse_listings_from_page(page: Page) -> list[ParsedListing]:
-    cards = await page.query_selector_all(LISTING_CARD)
-    listings: list[ParsedListing] = []
+    # Extract all card data in one JS round-trip instead of per-element awaits.
+    raw_cards: list[dict] = await page.evaluate("""() => {
+        return Array.from(document.querySelectorAll('article[data-id]')).map(card => {
+            const id = card.getAttribute('data-id') || '';
 
-    for card in cards:
+            const linkEl = card.querySelector('h2 a[href]')
+                        || card.querySelector('a[href*="otomoto.pl/osobowe/oferta"]');
+            const url = linkEl ? linkEl.href : '';
+
+            const titleEl = card.querySelector('h2');
+            const title = titleEl ? titleEl.innerText.trim() : '';
+
+            const priceEl = card.querySelector('h3');
+            const priceText = priceEl ? priceEl.innerText.trim() : '';
+
+            let currency = 'PLN';
+            for (const p of card.querySelectorAll('p')) {
+                const t = p.innerText.trim();
+                if (t === 'PLN' || t === 'EUR' || t === 'USD') { currency = t; break; }
+            }
+
+            let location = null;
+            for (const li of card.querySelectorAll('li')) {
+                if (li.innerText.includes('(')) {
+                    location = li.innerText.split('(')[0].trim();
+                    break;
+                }
+            }
+
+            const sellerEl = card.querySelector('[data-seller-id],[data-sna-id]');
+            const sellerId = sellerEl
+                ? (sellerEl.getAttribute('data-seller-id') || sellerEl.getAttribute('data-sna-id'))
+                : null;
+
+            const params = Array.from(card.querySelectorAll('dl dd')).map(dd => dd.innerText.trim());
+
+            return { id, url, title, priceText, currency, location, sellerId, params };
+        });
+    }""")
+
+    listings: list[ParsedListing] = []
+    for raw in raw_cards:
         try:
-            otomoto_id = await card.get_attribute(LISTING_ID_ATTR) or ""
+            otomoto_id = raw.get("id", "")
             if not otomoto_id:
                 continue
 
-            link_el = await card.query_selector(LISTING_LINK)
-            url = (await link_el.get_attribute("href") if link_el else None) or ""
+            url = raw.get("url", "")
             if url and not url.startswith("http"):
                 url = BASE_URL + url
-            if not url:
-                link_el2 = await card.query_selector("a[href]")
-                url = (await link_el2.get_attribute("href") if link_el2 else None) or ""
 
-            title_el = await card.query_selector(LISTING_TITLE)
-            title = (await title_el.inner_text() if title_el else "").strip()
+            price = _parse_price(raw.get("priceText", ""))
+            currency = raw.get("currency", "PLN")
 
-            price_el = await card.query_selector(LISTING_PRICE)
-            price_text = (await price_el.inner_text() if price_el else "").strip()
-            price = _parse_price(price_text)
-
-            currency_el = await card.query_selector(LISTING_CURRENCY)
-            currency = (await currency_el.inner_text() if currency_el else "PLN").strip()
-            if currency not in ("PLN", "EUR", "USD"):
-                currency = "PLN"
-
-            location_el = await card.query_selector(LISTING_LOCATION)
-            location_text = (await location_el.inner_text() if location_el else "").strip()
-            location = location_text.split("(")[0].strip() if location_text else None
-
-            seller_el = await card.query_selector(LISTING_SELLER_ID)
-            seller_id = None
-            if seller_el:
-                seller_id = await seller_el.get_attribute("data-seller-id") or await seller_el.get_attribute("data-sna-id")
-
-            params_el = await card.query_selector(LISTING_PARAMS_CONTAINER)
+            params = raw.get("params", [])
             year: int | None = None
             mileage: int | None = None
             fuel: str | None = None
             gearbox: str | None = None
-
-            if params_el:
-                items = await params_el.query_selector_all(LISTING_PARAM_ITEM)
-                for idx, el in enumerate(items):
-                    raw = (await el.inner_text()).strip()
-                    field = PARAM_POSITION_MAP.get(idx)
-                    if field == "mileage":
-                        digits = re.sub(r"\D", "", raw)
-                        mileage = int(digits) if digits else None
-                    elif field == "fuel":
-                        fuel = raw
-                    elif field == "gearbox":
-                        gearbox = raw
-                    elif field == "year":
-                        m = re.search(r"\d{4}", raw)
-                        year = int(m.group()) if m else None
+            for idx, raw_val in enumerate(params):
+                field = PARAM_POSITION_MAP.get(idx)
+                if field == "mileage":
+                    digits = re.sub(r"\D", "", raw_val)
+                    mileage = int(digits) if digits else None
+                elif field == "fuel":
+                    fuel = raw_val
+                elif field == "gearbox":
+                    gearbox = raw_val
+                elif field == "year":
+                    m = re.search(r"\d{4}", raw_val)
+                    year = int(m.group()) if m else None
 
             listings.append(
                 ParsedListing(
                     otomoto_id=otomoto_id,
                     url=url,
-                    title=title,
+                    title=raw.get("title", "").strip(),
                     price=price,
                     currency=currency,
                     year=year,
                     mileage=mileage,
                     fuel=fuel,
                     gearbox=gearbox,
-                    location=location,
+                    location=raw.get("location"),
                     vin=None,
-                    seller_id=seller_id,
+                    seller_id=raw.get("sellerId"),
                 )
             )
         except ScraperError:
@@ -197,10 +211,20 @@ async def scrape_search(filters: dict) -> AsyncGenerator[tuple[int, list[ParsedL
                 url = _build_search_url(filters, page=page_num)
                 logger.info("Scraping page %d: %s", page_num, url)
                 checker.assert_allowed(url)
-                await _navigate_with_retry(page, url, throttler)
-
-                page_listings = await _parse_listings_from_page(page)
-                logger.info("Page %d returned %d listings", page_num, len(page_listings))
+                t0 = asyncio.get_event_loop().time()
+                try:
+                    await asyncio.wait_for(
+                        _navigate_with_retry(page, url, throttler),
+                        timeout=90,
+                    )
+                    page_listings = await asyncio.wait_for(
+                        _parse_listings_from_page(page),
+                        timeout=10,
+                    )
+                except asyncio.TimeoutError:
+                    raise ScraperError({"code": "page_timeout", "page": page_num, "url": url})
+                elapsed = asyncio.get_event_loop().time() - t0
+                logger.info("Page %d: %d listings in %.1fs", page_num, len(page_listings), elapsed)
                 if not page_listings:
                     break
                 yield page_num, page_listings

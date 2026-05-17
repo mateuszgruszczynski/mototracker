@@ -21,6 +21,48 @@ def _fmt(n: int | None) -> str:
     return f"{n:,}".replace(",", " ")
 
 
+@router.get("", response_class=HTMLResponse)
+async def all_listings(request: Request, db: Session = Depends(get_db)):
+    listings = (
+        db.query(Listing)
+        .options(subqueryload(Listing.price_points))
+        .order_by(Listing.last_seen_at.desc())
+        .all()
+    )
+
+    searches = {s.id: s for s in db.query(SavedSearch).all()}
+
+    rows = []
+    for lst in listings:
+        pps = lst.price_points
+        current_price = float(pps[-1].price) if pps else None
+        current_currency = pps[-1].currency if pps else "PLN"
+        search = searches.get(lst.saved_search_id)
+        rows.append({
+            "id": lst.id,
+            "title": lst.title or "–",
+            "year": lst.year,
+            "mileage": lst.mileage,
+            "price": current_price,
+            "currency": current_currency,
+            "price_fmt": f"{_fmt(int(current_price))} {current_currency}" if current_price else "–",
+            "mileage_fmt": f"{_fmt(lst.mileage)} km" if lst.mileage else "–",
+            "location": lst.location or "–",
+            "last_seen": lst.last_seen_at.strftime("%Y-%m-%d") if lst.last_seen_at else "–",
+            "sold_at": lst.sold_at.strftime("%Y-%m-%d") if lst.sold_at else None,
+            "status": lst.status,
+            "url": lst.url,
+            "search_id": search.id if search else None,
+            "search_name": search.name if search else "–",
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "listings/all.html",
+        {"rows_json": json.dumps(rows, ensure_ascii=False), "total": len(rows)},
+    )
+
+
 @router.get("/{otomoto_id}", response_class=HTMLResponse)
 async def detail(request: Request, otomoto_id: str, db: Session = Depends(get_db)):
     listing = (
